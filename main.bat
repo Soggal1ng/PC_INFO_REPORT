@@ -1,14 +1,17 @@
 @echo off
+:: requests for admin priveleges
 net session >nul 2>&1
 if %errorLevel% neq 0 (
     powershell -Command "Start-Process '%~f0' -Verb RunAs"
     exit /b
 )
+:: changes to the main directory
 cd /d %~dp0
 cls
 color 0B
 SETLOCAL enabledelayedexpansion
 title CLI
+:: checks if the onedrive folder exists [it does on modern PC's anyways idk why im checking for it.]
 if exist "%userprofile%\onedrive" (
     echo do you want to set it to onedrive, or no one drive? Y/N
     set /p "yorn=>> "
@@ -27,6 +30,7 @@ if exist "%userprofile%\onedrive" (
     echo The default file location is set as "!userprofile!\desktop"
     timeout /t 1 >nul
 )
+:: checks if the file exists already, if it does it prompts to overwrite it (delete it and replace it)
 if exist "%defaultfileloc%\%username%_PC_INFO.txt" (
     echo A file already exists in the default location. Do you want to overwrite it? Y/N
     set /p "overwrite=>> "
@@ -59,9 +63,11 @@ if "!userpath!"=="" (
 if not exist "%targetloc%" (
     mkdir "%targetloc%"
 )
+:: main script
 echo PC INFO REPORT >> "%targetloc%\%username%_PC_INFO.txt"
 echo made for %username% on %computername% at %time% on %date% >> "%targetloc%\%username%_PC_INFO.txt"
 echo. >> "%targetloc%\%username%_PC_INFO.txt"
+:: network info
 echo ^<------NETWORK INFO------^> >> "%targetloc%\%username%_PC_INFO.txt"
 ipconfig /all >> "%targetloc%\%username%_PC_INFO.txt"
 powershell -command "try { (Invoke-RestMethod -Uri 'https://api.ipify.org' -TimeoutSec 5) } catch { 'Unable to retrieve public IP (no internet or blocked)' }" >> "%targetloc%\%username%_PC_INFO.txt"
@@ -69,6 +75,7 @@ powershell -command "Get-DnsClientCache | Select Entry,Data,TTL | Format-Table -
 powershell -command "Get-NetTCPConnection | Select LocalAddress,LocalPort,RemoteAddress,RemotePort,State,OwningProcess | Format-Table -AutoSize | Out-String -Width 200" >> "%targetloc%\%username%_PC_INFO.txt"
 echo ^<------NETWORK END------^> >> "%targetloc%\%username%_PC_INFO.txt"
 echo. >> "%targetloc%\%username%_PC_INFO.txt"
+:: pc info
 echo ^<------PC INFO------^> >> "%targetloc%\%username%_PC_INFO.txt"
 systeminfo >> "%targetloc%\%username%_PC_INFO.txt"
 powershell -command "Get-CimInstance Win32_ComputerSystem | Select Manufacturer,Model,Name | Format-List" >> "%targetloc%\%username%_PC_INFO.txt"
@@ -76,6 +83,7 @@ powershell -command "Get-CimInstance Win32_Bios | Select SerialNumber | Format-L
 powershell -command "Get-CimInstance Win32_LogicalDisk | Select DeviceID,VolumeName,Size,FreeSpace | Format-Table -AutoSize | Out-String -Width 200" >> "%targetloc%\%username%_PC_INFO.txt"
 echo ^<------PC END------^> >> "%targetloc%\%username%_PC_INFO.txt"
 echo. >> "%targetloc%\%username%_PC_INFO.txt"
+:: hardware info
 echo ^<------HARDWARE INFO------^> >> "%targetloc%\%username%_PC_INFO.txt"
 powershell -command "Get-CimInstance Win32_Processor | Select Name,NumberOfCores,MaxClockSpeed | Format-List" >> "%targetloc%\%username%_PC_INFO.txt"
 powershell -command "Get-CimInstance Win32_PhysicalMemory | Select Manufacturer,Capacity,Speed | Format-Table -AutoSize | Out-String -Width 200" >> "%targetloc%\%username%_PC_INFO.txt"
@@ -83,6 +91,7 @@ powershell -command "Get-CimInstance Win32_VideoController | Select Name,Adapter
 powershell -command "Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorID | Select @{N='Monitor';E={($_.UserFriendlyName -ne 0 | ForEach-Object {[char]$_}) -join ''}}, @{N='Serial';E={($_.SerialNumberID -ne 0 | ForEach-Object {[char]$_}) -join ''}} | Format-Table -AutoSize" >> "%targetloc%\%username%_PC_INFO.txt"
 echo ^<------HARDWARE END------^> >> "%targetloc%\%username%_PC_INFO.txt"
 echo. >> "%targetloc%\%username%_PC_INFO.txt"
+:: pc health
 echo ^<------PC HEALTH------^> >> "%targetloc%\%username%_PC_INFO.txt"
 powershell -command "$os=Get-CimInstance Win32_OperatingSystem; $up=(Get-Date)-$os.LastBootUpTime; \"Last Boot: $($os.LastBootUpTime)`nUptime: $($up.Days)d $($up.Hours)h $($up.Minutes)m\"" >> "%targetloc%\%username%_PC_INFO.txt"
 powershell -command "if (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired') { 'Reboot Required: YES' } else { 'Reboot Required: NO' }" >> "%targetloc%\%username%_PC_INFO.txt"
@@ -91,6 +100,7 @@ powershell -command "Get-HotFix | Sort-Object InstalledOn -Descending | Select -
 powershell -command "Get-PhysicalDisk | Select FriendlyName,MediaType,HealthStatus,OperationalStatus | Format-Table -AutoSize | Out-String -Width 200" >> "%targetloc%\%username%_PC_INFO.txt
 echo ^<------PC HEALTH END------^> >> "%targetloc%\%username%_PC_INFO.txt"
 echo. >> "%targetloc%\%username%_PC_INFO.txt"
+:: windows security
 echo ^<------WINDOWS SECURITY------^> >> "%targetloc%\%username%_PC_INFO.txt"
 powershell -command "Get-MpComputerStatus | Select AntivirusEnabled,AntivirusSignatureLastUpdated,RealTimeProtectionEnabled,QuickScanAge,FullScanAge | Format-List" >> "%targetloc%\%username%_PC_INFO.txt"
 powershell -command "Get-NetFirewallProfile | Select Name,Enabled | Format-Table -AutoSize" >> "%targetloc%\%username%_PC_INFO.txt"
@@ -98,15 +108,18 @@ powershell -command "Get-BitLockerVolume | Select MountPoint,VolumeStatus,Protec
 powershell -command "cscript //nologo $env:windir\system32\slmgr.vbs /dli" >> "%targetloc%\%username%_PC_INFO.txt"
 echo ^<------WINDOWS SECURITY END------^> >> "%targetloc%\%username%_PC_INFO.txt"
 echo. >> "%targetloc%\%username%_PC_INFO.txt"
+:: and some unwanted software stuff
 echo ^<------SOFTWARE STUFF------^> >> "%targetloc%\%username%_PC_INFO.txt"
 powershell -command "Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*,HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*,HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName} | Select DisplayName,DisplayVersion,Publisher | Sort DisplayName | Format-Table -AutoSize | Out-String -Width 200" >> "%targetloc%\%username%_PC_INFO.txt"
 powershell -command "Get-WindowsOptionalFeature -Online | Where-Object {$_.State -eq 'Enabled'} | Select FeatureName | Format-Table -AutoSize" >> "%targetloc%\%username%_PC_INFO.txt"
 powershell -command "Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP' -Recurse | Get-ItemProperty -Name Version,Release -ErrorAction SilentlyContinue | Where {$_.PSChildName -match '^(?!S)\p{L}'} | Select PSChildName,Version,Release | Format-Table -AutoSize" >> "%targetloc%\%username%_PC_INFO.txt"
 echo ^<------SOFTWARE END------^> >> "%targetloc%\%username%_PC_INFO.txt"
+:: asks if u want to open the txt file if not just closes the script
 choice /c yn /m "Open the file now"
 if !errorlevel! == 1 start "" notepad "%targetloc%\%username%_PC_INFO.txt"
 cls
 echo last boot time was
+:: oh i forgot, and it shows the last time your system was booted (unhelpful but its cool)
 systeminfo | find "System Boot Time"
 echo.
 timeout /t 3 >nul
